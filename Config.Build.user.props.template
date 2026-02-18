@@ -1,0 +1,19 @@
+<Project>
+
+  <PropertyGroup>
+    <!-- Set if the default steam game install directory doesn't work. -->
+    <!-- <YAPYAPGameRootDir></YAPYAPGameRootDir> -->
+    <!-- Set if your BepInEx/plugins/ directory isn't in the game files. -->
+    <!-- <YAPYAPPluginsDir></YAPYAPPluginsDir> -->
+  </PropertyGroup>
+
+  <Target Name="DeployFiles" AfterTargets="Build">
+    <Message Text="Deploy → $(YAPYAPPluginsDir)$(AssemblyName).dll" Importance="High" />
+    <Error
+      Text="Plugins directory '$([MSBuild]::NormalizeDirectory($(YAPYAPPluginsDir)))' doesn't exist! Configure YAPYAPPluginsDir to point to a valid path in the Config.Build.user.props file."
+      Condition="!Exists('$(YAPYAPPluginsDir)')"
+    />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(YAPYAPPluginsDir)" />
+  </Target>
+
+</Project>
