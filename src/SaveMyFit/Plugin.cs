@@ -36,7 +36,7 @@ namespace SaveMyFit
         {
             Log = Logger;
             Harmony.CreateAndPatchAll(Assembly.GetExecutingAssembly());
-            Log.LogInfo($"Plugin {Name} is loaded!");
+            Log.LogInfo($"Plugin {Name} is loaded with version {Version}!");
 
             // Subscribe to FrogDataLib events
             FrogDataManager.OnBeginSaving += SaveMyData;
