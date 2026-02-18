@@ -3,37 +3,33 @@ using BepInEx;
 using BepInEx.Logging;
 using FrogDataLib.DataManagement;
 using HarmonyLib;
+using Mirror;
 using YAPYAP;
 
 namespace SaveMyFit
 {
+    [BepInDependency(FrogDataLib.FrogDataPlugin.Id)]
     [BepInAutoPlugin]
     public partial class Plugin : BaseUnityPlugin
     {
         internal static ManualLogSource Log { get; private set; }
-        private static FrogDataContainer<SavedFit> FitContainer;
-        private static SavedFit MySavedFit = new();
+        private static FrogDataContainer<SavedFits> FitContainer = new("com.darmuh.SaveMyFit");
+        private static SavedFits FitCollection = new();
 
-        private static string GetFitName
+        private static int GetFitIndex(Pawn player)
         {
-            get
-            {
-                if (GetFitIndex < 0)
-                    return string.Empty;
+            if (player == null || player.PawnMaterial == null)
+                return -1;
 
-                return Pawn.LocalInstance.PawnMaterial.costumeLibrary.costumes[GetFitIndex].costumeName;
-            }
+            return player.PawnMaterial.CurrentCostumeIndex;
         }
 
-        private static int GetFitIndex
+        internal static string GetFitName(int index)
         {
-            get
-            {
-                if (Pawn.LocalInstance == null || Pawn.LocalInstance.PawnMaterial == null)
-                    return -1;
+            if (index < 0 || UIManager.Instance == null || UIManager.Instance.costumeLibrary.costumes.Length <= index)
+                return string.Empty;
 
-                return Pawn.LocalInstance.PawnMaterial.CurrentCostumeIndex;
-            }  
+            return UIManager.Instance.costumeLibrary.costumes[index].costumeName;
         }
 
         private void Awake()
@@ -42,63 +38,117 @@ namespace SaveMyFit
             Harmony.CreateAndPatchAll(Assembly.GetExecutingAssembly());
             Log.LogInfo($"Plugin {Name} is loaded!");
 
-            FitContainer = new FrogDataContainer<SavedFit>("com.darmuh.SaveMyFit");
-
             // Subscribe to FrogDataLib events
             FrogDataManager.OnBeginSaving += SaveMyData;
             FrogDataManager.OnLoadCompleted += LoadMyData;
+            FrogDataManager.OnSessionEnded += ClearCache;
         }
 
         private static void SaveMyData()
         {
-            Log.LogMessage($"Saving Fit to save!");
-            MySavedFit.FitNumber = GetFitIndex;
-            MySavedFit.FitName = GetFitName;
-            FitContainer.SaveModData(MySavedFit);
-            Log.LogMessage($"Name: {MySavedFit.FitName}\nIndex: {MySavedFit.FitNumber}");
+            Log.LogMessage($"Saving Fits to save!");
+            foreach(var item in GameManager.Instance.playersByActorId)
+            {
+                FitCollection.SetFitFor(item.Value.PlayerId, GetFitIndex(item.Value));
+            }
+
+            //save collection
+            FitContainer.SaveModData(FitCollection);
+            Log.LogDebug($"======== Fit Info [ Indexes ] ========");
+            foreach (var indexFo in FitCollection.FitNumbers)
+            {
+                Log.LogDebug($"{indexFo.Key} - {indexFo.Value}");
+            }
+            Log.LogDebug($"======================================");
+            Log.LogDebug($"======== Fit Info [ Names ] ========");
+            foreach (var indexFo in FitCollection.FitNames)
+            {
+                Log.LogDebug($"{indexFo.Key} - {indexFo.Value}");
+            }
+            Log.LogDebug($"======================================");
         }
 
         private static void LoadMyData()
         {
-            Log.LogMessage($"Fit updated from save!");
+            Log.LogMessage($"Fits loaded from save!");
+            FitCollection = FitContainer.GetModData();
+            Log.LogDebug($"======== Fit Info [ Indexes ] ========");
+            foreach(var indexFo in FitCollection.FitNumbers)
+            {
+                Log.LogDebug($"{indexFo.Key} - {indexFo.Value}");
+            }
+            Log.LogDebug($"======================================");
+            Log.LogDebug($"======== Fit Info [ Names ] ========");
+            foreach (var indexFo in FitCollection.FitNames)
+            {
+                Log.LogDebug($"{indexFo.Key} - {indexFo.Value}");
+            }
+            Log.LogDebug($"======================================");
         }
 
-        [HarmonyPatch(typeof(PawnMaterial), nameof(PawnMaterial.OnStartClient))]
-        public class PawnMaterialStartClient
+        private static void ClearCache()
         {
-            public static void Postfix(PawnMaterial __instance)
+            FitCollection = new();
+        }
+
+        [HarmonyPatch(typeof(Pawn), nameof(Pawn.ServerSetPlayerId))]
+        public class PawnStart
+        {
+            public static void Postfix(Pawn __instance, string id)
             {
-                SetMyOutfit(__instance);
+                if (FitCollection.TryGetFitIndex(id, out int index) && FitCollection.TryGetFitName(id, out string name))
+                {
+                    SetPawnOutfit(__instance.PawnMaterial, index, name);
+                }
+                else
+                    Log.LogMessage($"No saved fit for player with playerID - {id}");
             }
         }
 
-        private static void SetMyOutfit(PawnMaterial pawnMaterial)
+        [HarmonyPatch(typeof(PawnMaterial), nameof(PawnMaterial.ApplyCostumeInternal))]
+        public class CatchCostumeChange
         {
-            if (MySavedFit.FitNumber < 0)
+            public static void Postfix(PawnMaterial __instance, int costumeIndex)
+            {
+                //only run this patch on the host client
+                if (NetworkClient.active && !NetworkServer.active)
+                    return;
+
+                if (!__instance.TryGetComponent<Pawn>(out var pawn))
+                    return;
+
+                FitCollection.SetFitFor(pawn.PlayerId, costumeIndex);
+                FitContainer.SaveModData(FitCollection);
+            }
+        }
+
+        private static void SetPawnOutfit(PawnMaterial pawnMaterial, int fitIndex, string fitName)
+        {
+            if (fitIndex < 0)
             {
                 Log.LogWarning("No saved fit to set!");
                 return;
             }
 
-            if (pawnMaterial.costumeLibrary.costumes.Length <= MySavedFit.FitNumber)
+            if (pawnMaterial.costumeLibrary.costumes.Length <= fitIndex)
             {
-                Log.LogWarning($"Costumes list does not contain our FitNumber [ {MySavedFit.FitNumber} ]");
+                Log.LogWarning($"Costumes list does not contain the FitNumber [ {fitIndex} ]");
                 return;
             } 
 
-            if (pawnMaterial.costumeLibrary.costumes[MySavedFit.FitNumber].costumeName != MySavedFit.FitName)
+            if (pawnMaterial.costumeLibrary.costumes[fitIndex].costumeName != fitName)
             {
                 Log.LogWarning($"""
                     Saved fit appears to have a mismatched name!
-                    Fit at index {MySavedFit.FitNumber}: {pawnMaterial.costumeLibrary.costumes[MySavedFit.FitNumber].costumeName}
-                    Expected Fit: {MySavedFit.FitName}
+                    Fit at index {fitIndex}: {pawnMaterial.costumeLibrary.costumes[fitIndex].costumeName}
+                    Expected Fit: {fitName}
                     
                     """);
                 return;
             }
 
-            pawnMaterial.ApplyCostume(MySavedFit.FitNumber);
-            Log.LogMessage($"Set costume to saved fit {MySavedFit.FitName}");
+            pawnMaterial.ApplyCostume(fitIndex);
+            Log.LogMessage($"Set costume to saved fit {fitName}");
         }
     }
 }

@@ -7,8 +7,8 @@ repository = "https://thunderstore.io"
 [package]
 namespace = "darmuh"
 name = "SaveMyFit"
-description = "TODO: Fill in short mod description."
-websiteUrl = "" # TODO: Add a link to your mod repository here (optional)
+description = "Quality of Life mod that saves player costume (color) choices to the save file using FrogDataLib"
+websiteUrl = "https://github.com/darmuh/SaveMyFit"
 containsNsfwContent = false
 
 [package.dependencies]
@@ -41,4 +41,4 @@ communities = [ "yapyap", ]
 [publish.categories]
 # See categories at:
 # https://thunderstore.io/api/experimental/community/yapyap/category/
-yapyap = [ "mods", ]
+yapyap = [ "mods", "qol", "robes", "host" ]

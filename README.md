@@ -1,31 +1,14 @@
-# SaveMyFit
+# SaveMyFit  
 
-Describe your project here!
+**SaveMyFit** is a simple Quality of Life mod that saves player costume (color) choices to the save file using [FrogDataLib](https://thunderstore.io/c/yapyap/p/Robyn/FrogDataLib/)  
 
-## Template Instructions
+## Features
+ - Outfit selections for all players are saved on a per-savefile basis.  
+ - Outfits are matched to both the index and the name of the costume (color).  
+	- If a mismatch is detected, the outfit will **not** be applied.
+		- This could happen if the number of Colors has changed since the last time this save was played.  
+	- Each client's unique playerId is saved with their outfit name and outfit index.  
+ - Outfit save information is updated every time the game is saved and any time someone changes their fit (color).  
 
-You can remove this section after you've set up your project.
-
-Next steps:
-
-- Create a copy of the `Config.Build.user.props.template` file and name it `Config.Build.user.props`
-  - This will automate copying your plugin assembly to `BepInEx/plugins/`
-  - Configure the paths to point to your game path and your `BepInEx/plugins/`
-  - Game assembly references should work if the path to the game is valid
-- Search `TODO` in the whole project to see what you should configure or modify
-
-### Thunderstore Packaging
-
-This template comes with Thunderstore packaging built-in, using [TCLI](<https://github.com/thunderstore-io/thunderstore-cli>).
-
-You can build Thunderstore packages by building with release configuration:
-
-```sh
-dotnet build -c Release -v d
-```
-
-> [!NOTE]  
-> You can learn about different build options with `dotnet build --help`.  
-> `-c` is short for `--configuration` and `-v d` is `--verbosity detailed`.
-
-The built package will be found at `artifacts/thunderstore/`.
+ ### Source/Bug reports
+ - Feel free to browse the source of this mod and report any feedback at https://github.com/darmuh/SaveMyFit
