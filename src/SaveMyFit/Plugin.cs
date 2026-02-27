@@ -29,7 +29,7 @@ namespace SaveMyFit
             if (index < 0 || UIManager.Instance == null || UIManager.Instance.costumeLibrary.costumes.Length <= index)
                 return string.Empty;
 
-            return UIManager.Instance.costumeLibrary.costumes[index].costumeName;
+            return UIManager.Instance.costumeLibrary.costumes[index].localisationKey;
         }
 
         private void Awake()
@@ -37,6 +37,7 @@ namespace SaveMyFit
             Log = Logger;
             Harmony.CreateAndPatchAll(Assembly.GetExecutingAssembly());
             Log.LogInfo($"Plugin {Name} is loaded with version {Version}!");
+            Log.LogDebug("Costume selections will now be associated with and remembered via save files!");
 
             // Subscribe to FrogDataLib events
             FrogDataManager.OnBeginSaving += SaveMyData;
@@ -136,11 +137,11 @@ namespace SaveMyFit
                 return;
             } 
 
-            if (pawnMaterial.costumeLibrary.costumes[fitIndex].costumeName != fitName)
+            if (pawnMaterial.costumeLibrary.costumes[fitIndex].localisationKey != fitName)
             {
                 Log.LogWarning($"""
                     Saved fit appears to have a mismatched name!
-                    Fit at index {fitIndex}: {pawnMaterial.costumeLibrary.costumes[fitIndex].costumeName}
+                    Fit at index {fitIndex}: {pawnMaterial.costumeLibrary.costumes[fitIndex].localisationKey}
                     Expected Fit: {fitName}
                     
                     """);
